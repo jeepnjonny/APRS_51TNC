@@ -6,7 +6,7 @@ import sys
 
 ##########
 #
-# version 0.2
+# version 1.0
 #
 ##########
 
@@ -44,7 +44,6 @@ class x1c3:
 
     def hasConfig(self):
         # return true if the config dictionary has contents
-        #if debug: print("hasConfig=", str(bool(self.config)))  #debug print
         return bool(len(self.raw) > 0)
 
     def printRaw(self):
@@ -60,8 +59,6 @@ class x1c3:
         # wait for the user before continuing
         print("--------------------------------")
         input("Continue?")
-
-        self.debug("Exit printConfig")   #debug print
         return True
 
     def encodeHex(self,param,length, pad=b'\xff'):
@@ -75,13 +72,12 @@ class x1c3:
 
     def intToHex(self,param,bytes=1):
         # Convert the integer to a hexadecimal string, with the specified number of bytes
-        hex_str = self.config[param].to_bytes(bytes, 'big')
+        hex_str = int(self.config[param]).to_bytes(bytes, 'big')
         return hex_str
 
 ########## File routines
     def readFile(self):
         # read the config string from the file in to self.raw
-        print("Reading file...")
         try:
             with open(self.file, "rb") as f:
                 self.raw = f.read()
@@ -99,8 +95,6 @@ class x1c3:
         except Exception as e:
             print("An error occurred:", e)
         return False
-
-
 
 ########## Menu tools
     def menuHeader(self):
@@ -122,7 +116,7 @@ class x1c3:
         prompt = param + " (<="+str(length)+" characters):"
         # keep asking for user input until they have the right input
         while True:
-            response = input(prompt).upper()
+            response = input(prompt)
             if len(response) <= length: break
 
         self.config[param] = response
@@ -156,7 +150,7 @@ class x1c3:
         print("--------------------------------")
         # ask for the user input
         response = input(prompt)
-        # this allows multiuse: for a general menu and a menu for a dictionary item
+        # this allows multiuse: for a general menu and a menu for a dictionary item. Don't change it if the user doesn't enter anything
         if param != '' and response !='' : self.config[param] = response
         return response
 
@@ -179,17 +173,19 @@ class x1c3:
     def menu_setup(self):
         while True:
             response = self.inputMenu('',"Selection:",
-                ['   Callsign: '+self.config['CALLSIGN'],
-                '       SSID: '+str(self.config['SSID']),
-                '  Site Type: '+self.printEnum('Site Type',['Fixed','Mobile','Weather']),
-                '        GPS: '+self.printEnum('GPS Enable'),
-                '     Icon 1: '+self.config['Icon 1'],
-                '     Icon 2: '+self.config['Icon 2'],
-                'Icon 2 Time: '+str(self.config['Icon 2 Time'])],
+                ['       Callsign: '+self.config['CALLSIGN'],
+                '           SSID: '+str(self.config['SSID']),
+                '      Site Type: '+self.printEnum('Site Type',['Fixed','Mobile','Weather']),
+                '      Data Type: '+self.config['Type'],
+                '            GPS: '+self.printEnum('GPS Enable'),
+                '         Icon 1: '+self.config['Icon 1'],
+                '         Icon 2: '+self.config['Icon 2'],
+                'Icon 2 Time (s): '+str(self.config['Icon 2 Time'])],
                 True)
             if response == '0': self.inputChar('CALLSIGN',7)
             elif response == '1': self.inputMenu('SSID','',['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'])
             elif response == '2': self.inputMenu('Site Type','',['Fixed','Mobile','Weather'])
+            elif response == '3': self.inputChar('Type')
             elif response == '3': self.toggleVal('GPS Enable')
             elif response == '4': self.inputChar('Icon 1',2)
             elif response == '5': self.inputChar('Icon 2',2)
@@ -199,13 +195,13 @@ class x1c3:
     def menu_beacon(self):
         while True:
             response = self.inputMenu('',"Selection:",
-            ['    Smart Beacon: '+self.printEnum('Smart',['OFF','1','2','3','4','5']),
+            ['    Smart Beacon: '+self.printEnum('Smart',['Off','1-Car (20s)','2-Bicycle (40s)','3-Walking (60s)','4-Climbing (90s)','5-Barely moving (120s)']),
             '   Manual Enable: '+self.printEnum('Manual Enable'),
             '        GPS Save: '+self.printEnum('GPS Save'),
             '    Queue Enable: '+self.printEnum('Queue Enable'),
-            '      Queue Time: '+str(self.config['Queue Time']),
+            '  Queue Time (s): '+str(self.config['Queue Time']),
             '     Time Enable: '+self.printEnum('Time Enable'),
-            '            Time: '+str(self.config['Time Value']),
+            '        Time (s): '+str(self.config['Time Value']),
             '    MIC-E Enable: '+self.printEnum('MIC-E Enable'),
             '      MIC-E Code: '+self.printEnum('MIC-E Code',['Off Duty','En Route','In Service','Returning','Committed','Special','Priority','Emergency']),
             '         Message: '+self.config['Message'],
@@ -214,9 +210,10 @@ class x1c3:
             '    Add Voltage: '+self.printEnum('Voltage Enable'),
             'Add Temperature: '+self.printEnum('Temperature Enable'),
             ' Add Satellites: '+self.printEnum('Satellite Enable'),
-            '   Add Odometer: '+self.printEnum('Odometer Enable')],
+            '  Save Odometer: '+self.printEnum('Odometer Enable'),
+            ' Beacon Channel: '+self.printEnum('Beacon Channel',['CH A','CH B','CH A+B','Bluetooth'])],
             True)
-            if response == '0': self.inputMenu('Smart','',['OFF','1','2','3','4','5'])
+            if response == '0': self.inputMenu('Smart','',['Off','1-Car (20s)','2-Bicycle (40s)','3-Walking (60s)','4-Climbing (90s)','5-Barely moving (120s)'])
             elif response == '1': self.toggleVal('Manual Enable')
             elif response == '2': self.toggleVal('GPS Save')
             elif response == '3': self.toggleVal('Queue Enable')
@@ -232,6 +229,7 @@ class x1c3:
             elif response == '13': self.toggleVal('Temperature Enable')
             elif response == '14': self.toggleVal('Satellite Enable')
             elif response == '15': self.toggleVal('Odometer Enable')
+            elif response == '5': self.inputMenu('Beacon Channel','',['CH A','CH B','CH A+B','Bluetooth'])
             else: break
 
     def menu_bluetooth(self):
@@ -349,7 +347,6 @@ class x1c3:
 ########## Device routines
     def readSerialVersion(self):
         print("Reading Version...")  #debug print
-
         try:
             #open the serial port
             with serial.Serial(self.port, 9600, timeout=1) as ser:
@@ -371,12 +368,8 @@ class x1c3:
             print("Error opening or using serial port:",e)
             return False
 
-        self.debug("Exit readSerialVersion")  #debug print
-
-
     def readSerialDevice(self):
         print("Reading device...")  #debug print
-
         try:
             #open the serial port
             with serial.Serial(self.port, 9600, timeout=3) as ser:
@@ -391,28 +384,19 @@ class x1c3:
             print("Error opening or using serial port:",e)
             return False
 
-        self.debug("Exit readSerialDevice")  #debug print
-
     def writeSerialDevice(self):
         print("Writing device...")  #debug print
-
         try:
             #open the serial port
             with serial.Serial(self.port, 9600, timeout=3) as ser:
                 self.debug("Port open, writing")  #debug print
                 # Send the read command
-                command = bytes("AT+SET=WRITE",'utf-8')+self.raw[6:]   # exclude the 'HELLO' header
-                self.debug("serial string="+str(command))
-                ser.write(command)
-                # listen for the response
-                print('write response:', ser.read(1))
+                ser.write(bytes("AT+SET=WRITE",'utf-8'))
+                ser.write(self.raw[5:])   # exclude the 'HELLO' header
                 return True
         except serial.SerialException as e:
             print("Error opening or using serial port:",e)
             return False
-
-        self.debug("Exit writeSerialDevice")  #debug print
-
 
     def readIPDevice(self):
         # possible future feature!
@@ -442,7 +426,7 @@ class x1c3:
         bytestring += self.encodeHex('Icon 1',2)
         bytestring += self.intToHex('BT Out 2')
         bytestring += self.intToHex('BT Out 1')
-        bytestring += b'\x01\x00\x01\x01\x01\x01\x01\x01w' # unknown bytes
+        bytestring += b'\x01\x00\x01\x01\x01\x01\x01\x01w' # 9
         bytestring += self.encodeHex('Latitude',10)
         bytestring += self.intToHex('Site Type')
         bytestring += self.intToHex('GPS Enable')
@@ -458,18 +442,19 @@ class x1c3:
         bytestring += self.intToHex('Mileage Enable')
         bytestring += self.intToHex('Satellite Enable')
         bytestring += self.encodeHex('Message',62,)
-        bytestring += b"\xff\xff" #
+        bytestring += b"\xff\xff" # 2
         bytestring += bytes('1,'+self.config['Frequency 1']+','+self.config['Frequency 2']+',0,3,0,0\r\n','utf-8')
         bytestring += b"\x00\xff\xff" # the tail end of the frequency string
         bytestring += self.intToHex('Module Power')
         bytestring += self.intToHex('Module Volume')
         bytestring += self.intToHex('Module Mic')
-        bytestring += b'\x00'   #
+        bytestring += b'\x00'   # 1
         bytestring += self.intToHex('Auto Poweroff')
-        bytestring += b'\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01' #
+        bytestring += b'\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01' # 10
+        bytestring += b'\x01\x01\x01\x01' # 4
         bytestring += self.intToHex('IP Protocol')
         bytestring += self.intToHex('IP Port',2)
-        bytestring += b'\x00\x00\x00\x00\x00' #
+        bytestring += b'\x00\x00\x00\x00\x00' # 5
         bytestring += self.intToHex('Odometer Enable')
         bytestring += self.encodeHex('Icon 2',2)
         bytestring += self.intToHex('Icon 2 Time',2)
@@ -480,16 +465,28 @@ class x1c3:
         bytestring += b'\xff'   # 1
         bytestring += self.encodeHex('Wifi Name',16,b'\x00')
         bytestring += self.encodeHex('Wifi Code',16,b'\x00')
-        bytestring += b'START1\x00\x01\x00' #
+        bytestring += b'START1\x00\x01\x00' # 
         bytestring += self.intToHex('Altitude',2)
         bytestring += b'\xff\xff\xff'
         bytestring += self.intToHex('Last Position')
         bytestring += self.intToHex('Six Knots')
         bytestring += self.intToHex('Stop 30m Alarm')
         bytestring += self.intToHex('Stop 60m Emergency')
-        bytestring += b'\x01\x01\xff\xff\xff\xff\xff\xff\xff\xff\x08\x08\x08\x08\xc0\xa8\x01\x9b\xc0\xa8\x01\x01\xff\xff\xff\x00\xdc\x01\x02\t\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xffo(\x9b\x7f\x11\x08E \xbd*\xad\x8eB^\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+        bytestring += b'\x01\x01\xff\xff\xff\xff\xff\xff\xff\xff' # no idea what these bytes mean, but they don't change
+        bytestring += b'\x08\x08\x08\x08\xc0\xa8\x01\x9b\xc0\xa8' # 126
+        bytestring += b'\x01\x01\xff\xff\xff\x00\xdc\x01\x02\t'
+        bytestring += b'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+        bytestring += b'\xff\xff\xff\xff\xff\xffo(\x9b\x7f'
+        bytestring += b'\x11\x08E \xbd*\xad\x8eB^'
+        bytestring += b'\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff'
+        bytestring += b'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+        bytestring += b'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+        bytestring += b'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+        bytestring += b'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+        bytestring += b'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+        bytestring += b'\xff\xff\xff\xff\xff\xff'
         bytestring += self.encodeHex('Emergency Message',32)
-        bytestring += b'\x00'
+        bytestring += b'\x00' # 1
         bytestring += self.intToHex('Brightness')
         bytestring += self.intToHex('Alert Enable')
         bytestring += self.intToHex('Volume TX')
@@ -507,7 +504,6 @@ class x1c3:
         bytestring += self.intToHex('DIGI 1 Enable')
         bytestring += self.encodeHex('DIGI 2',7)
         bytestring += self.intToHex('DIGI 2 Enable')
-#        bytestring += b'\x00' #
         self.raw = bytestring
         return bytestring
 
@@ -517,7 +513,7 @@ class x1c3:
         if True:
             # parse out all the bytes into their parts
             try:
-                self.config['Header'] = self.raw[0:5].decode('utf-8')
+                #self.config['Header'] = self.raw[0:5].decode('utf-8')
 
                 self.config['CALLSIGN'] = self.raw[13:20].decode('utf-8')
                 self.config['SSID'] = ord(self.raw[20:21])
@@ -599,8 +595,9 @@ class x1c3:
                 self.config['Timezone Offset'] = ord(self.raw[49:50])
 
                 self.parsed = True
-            except UnicodeDecodeError:
-                print("Config didn't load correctly!")
+            except UnicodeDecodeError as e:
+                print("Config didn't expand correctly:", e)
+                self.printRaw()
                 time.sleep(2)
                 self.parsed = False
         return
@@ -611,17 +608,16 @@ def main():
     device = x1c3()
 
     # get the command line arguments
-    parser = argparse.ArgumentParser(description='A tool to read and write configuration to the X1C3 APRS device', epilog='text at bottom')
+    parser = argparse.ArgumentParser(description='A tool to read and write configuration to the X1C3 APRS device')
     parser.add_argument("-v", "--verbose", action='store_true')
-    parser.add_argument("--device_dump", action='store_true', help = "Read the settings from the device and dump to screen, non-interactive")
-    parser.add_argument("--file_dump", action='store_true', help = "Read the settings from the device and dump to screen, non-interactive")
-    parser.add_argument("-r", "--read", action='store_true', help = "Read the settings directly into the file, non-interactive")
-    parser.add_argument("-w", "--write", action='store_true', help = "Write the settings directly into the device, non-interactive")
     parser.add_argument("-p", "--port", nargs='?', default='/dev/ttyUSB0', help = "Set the port")
+    parser.add_argument("-f", "--file", nargs='?', default='settings.sav', help = "Set the file")
+    parser.add_argument("-r", "--read", action='store_true', help = "Read the settings from the device into the file, non-interactive")
+    parser.add_argument("-w", "--write", action='store_true', help = "Write the settings from the file to the device, non-interactive")
     parser.add_argument("-ef", "--edit_file", action='store_true', help = "Load the file and parse it, go straight into edit menu")
     parser.add_argument("-ed", "--edit_device", action='store_true', help = "Load the device and parse it, go straight into edit menu")
-    parser.add_argument("-f", "--file", nargs='?', default='settings.sav', help = "Set the file")
-    parser.add_argument("--test",action='store_true')
+    parser.add_argument("--device_dump", action='store_true', help = "Read the settings from the device and dump to screen, non-interactive")
+    parser.add_argument("--file_dump", action='store_true', help = "Read the settings from the device and dump to screen, non-interactive")
 
     args = parser.parse_args()
 
@@ -635,7 +631,7 @@ def main():
     device.debug("Write: "+str(args.write))      #debug print
 
     action = ''
-    # if the user passed args to read or write the config non-interactivly, just do that and exit\
+    # if the user passed args to read or write the config non-interactivly, just do that and exit
     # but first test that we can read the version from the device!
     if args.read:
         if device.readSerialVersion():
@@ -659,7 +655,7 @@ def main():
     if args.device_dump:
         if device.readSerialDevice():
             print('bytes read=',len(device.raw))
-            device.printraw()
+            device.printRaw()
         else: print("Can't read device!")
         sys.exit()
 
@@ -685,27 +681,12 @@ def main():
             device.compressConfig()
             action = '6'
 
-    if args.test:
-        # do what you need to test
-        print("running test...")
-        device.readSerialDevice()
-        device.printRaw()
-        print("Parsing...")
-        device.ExpandConfig()
-        print("compressing...")
-        device.compressConfig()
-        device.printRaw()
-        print("test done!")
-        sys.exit()
-
-    # main program loop
+    ########### main program loop ###########
     while action != 'q':
         device.debug("MainLoop start")  #debug print
 
         if action == '':
             action = device.inputMenu('',"Selection:",['Read from device','Write to device','Read from file','Write to file','Port: '+device.getPort(),'File: '+device.getFile(),'Edit Config','Print Config'],True)
-
-        #device.debug("Action="+ action)  #debug print
 
         if action == '0':   #read device
             if device.readSerialVersion():
