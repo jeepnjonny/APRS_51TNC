@@ -5,10 +5,13 @@ A command line tool to interact with the configuration on
 various BH4TDV APRS devices such as X1C3, X1C5, HG-UV98, etc.
 ![image](https://github.com/user-attachments/assets/60e12d1c-2014-4eee-a22c-0a59909695e3)
 
-*** still incomplete at this time ***
 Will read the config from the device, display it, edit it, save to file.
 
-need to finish the serial write back to the device.
+Tested with: 
+
+* x1c3 FW: 51X1C3_20180927A BH4TDV
+* HG-UV98 FW: UV98_868_220430_D4
+
 
 possible enhancements:
 
